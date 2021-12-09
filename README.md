@@ -11,7 +11,7 @@ The .compare file reports differences in radius, acceptor/donor/metallic
 status, and position (if above a threshold) between atoms in the two models.
 It also reports atoms that are only present in one of the models.
 
-# Running
+## Running
 
 First source init.sh to set up the environment (or set it up manually).
 
