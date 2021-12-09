@@ -88,7 +88,6 @@ def run_comparison(fileName1, fileName2, thresh, verbosity = 10):
     m2ID += 1
 
   # Finish up either list that is not done
-  print('XXX finishing up')
   while m1ID < len(m1):
     print('Only in first:',atomID(m1[m1ID]))
     m1ID += 1
