@@ -8,7 +8,7 @@
 ######################
 # Parse the command line
 
-orig="ced816138fff1a5cea98c1d40188b5134f3bb7c4"
+orig="8c9ac5a1ffc372f4f83152a0ec33c0426bfdd413"
 if [ "$1" != "" ] ; then orig="$1" ; fi
 
 echo "Checking against $orig"
@@ -56,7 +56,6 @@ for f in $files; do
   cp $inf $tfile
 
   ##############################################
-  # Test with -FLIP command-line argument on the original, so it behaves like the new.
 
   echo "Testing structure $base"
   # Run old and new versions in parallel
@@ -64,14 +63,23 @@ for f in $files; do
   ($new_exe $new_args output.file_name=outputs/$base.new.out output.dump_file_name=outputs/$base.new.dump $tfile > outputs/$base.new.stdout 2> outputs/$base.new.stderr) &
   wait
 
-  # Test for unexpected differences.  The script returns messages when there
+  # Test for unexpected differences in atom-dump files.  The script returns messages when there
   # are any differences.  Threshold for significant difference between atom
   # positions is set.
   THRESH=0.05
   d=`python compare_dump_files.py outputs/$base.orig.dump outputs/$base.new.dump $THRESH`
   echo "$d" > outputs/$base.compare
   s=`echo -n $d | wc -c`
-  if [ $s -ne 0 ]; then echo " Failed!"; failed=$((failed + 1)); fi
+  if [ $s -ne 0 ]; then echo " Dump comparison Failed!"; failed=$((failed + 1)); fi
+
+  # Test for unexpected differences in total counts.
+  grep tot outputs/$base.orig.out > outputs/$base.orig.tot
+  grep tot outputs/$base.new.out > outputs/$base.new.tot
+  d=`diff outputs/$base.orig.tot outputs/$base.new.tot`
+  s=`echo -n $d | wc -c`
+  if [ $s -ne 0 ]; then echo " Score comparison Failed!"; failed=$((failed + 1)); fi
+
+  # Done with the input file.
   rm -f $tfile
 
 done
@@ -81,7 +89,7 @@ if [ $failed -eq 0 ]
 then
   echo "Success!"
 else
-  echo "$failed files failed"
+  echo "$failed comparisons failed"
 fi
 
 exit $failed
