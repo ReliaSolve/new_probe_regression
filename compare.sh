@@ -28,9 +28,13 @@ echo "Building $orig"
 (cd probe; git checkout $orig; make) &> /dev/null 
 
 orig_exe="./probe/probe"
-orig_args="-quiet -kin -mc -self "all" -count -sepworse"
+orig_args='-quiet -kin -mc -self all -count -sepworse'
+orig_surface_args='-quiet -kin -mc -outside all'
+orig_self_args='-quiet -DUMPH2O -kin -mc -self all -sepworse'
 new_exe="mmtbx.probe2"
-new_args='source_selection="all" record_added_hydrogens=False approach=self count_dots=True output.separate_worse_clashes=True'
+new_args='source_selection=all record_added_hydrogens=False approach=self count_dots=True output.separate_worse_clashes=True'
+new_surface_args='source_selection=all output.add_kinemage_keyword=True approach=surface'
+new_self_args='source_selection=all output.add_kinemage_keyword=True record_added_hydrogens=True approach=self output.separate_worse_clashes=True'
 
 ######################
 # Generate two outputs for each test file, redirecting standard
@@ -56,6 +60,18 @@ for f in $files; do
   cp $inf $tfile
 
   ##############################################
+
+  echo "Producing self Kinemages for $base"
+  # Run old and new versions in parallel
+  ($orig_exe $orig_self_args $tfile > outputs/$base.orig.self.kin 2> outputs/$base.orig.self.stderr) &
+  ($new_exe $new_self_args output.file_name=outputs/$base.new.self.kin $tfile > outputs/$base.new.self.stdout 2> outputs/$base.new.self.stderr) &
+  wait
+
+  echo "Producing surfaces for $base"
+  # Run old and new versions in parallel
+  ($orig_exe $orig_surface_args $tfile > outputs/$base.orig.surface.kin 2> outputs/$base.orig.surface.stderr) &
+  ($new_exe $new_surface_args output.file_name=outputs/$base.new.surface.kin $tfile > outputs/$base.new.surface.stdout 2> outputs/$base.new.surface.stderr) &
+  wait
 
   echo "Testing structure $base"
   # Run old and new versions in parallel
