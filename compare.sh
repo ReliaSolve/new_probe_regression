@@ -31,10 +31,12 @@ orig_exe="./probe/probe"
 orig_args='-quiet -kin -mc -self all -count -sepworse'
 orig_surface_args='-quiet -kin -mc -outside all'
 orig_self_args='-quiet -DUMPH2O -kin -mc -self all -sepworse'
+orig_count_args='-quiet -DUMPATOMINFO all'
 new_exe="mmtbx.probe2"
 new_args='source_selection=all record_added_hydrogens=False approach=self count_dots=True output.separate_worse_clashes=True'
 new_surface_args='source_selection=all output.add_kinemage_keyword=True approach=surface'
 new_self_args='source_selection=all output.add_kinemage_keyword=True record_added_hydrogens=True approach=self output.separate_worse_clashes=True'
+new_count_args='source_selection=all approach=count_atoms'
 
 ######################
 # Generate two outputs for each test file, redirecting standard
@@ -53,30 +55,28 @@ for f in $files; do
   # File base name
   base=`echo $f | cut -d \. -f 1`
 
-  # We must extract to a file and then run with that file as a command-line argument
+  # We must use and input file as a command-line argument
   # because the original version did not process all models in a file when run with
   # the model coming on standard input.
-  tfile=outputs/temp_file.tmp
-  cp $inf $tfile
 
   ##############################################
 
   echo "Producing self Kinemages for $base"
   # Run old and new versions in parallel
-  ($orig_exe $orig_self_args $tfile > outputs/$base.orig.self.kin 2> outputs/$base.orig.self.stderr) &
-  ($new_exe $new_self_args output.file_name=outputs/$base.new.self.kin $tfile > outputs/$base.new.self.stdout 2> outputs/$base.new.self.stderr) &
+  ($orig_exe $orig_self_args $inf > outputs/$base.orig.self.kin 2> outputs/$base.orig.self.stderr) &
+  ($new_exe $new_self_args output.file_name=outputs/$base.new.self.kin $inf > outputs/$base.new.self.stdout 2> outputs/$base.new.self.stderr) &
   wait
 
-  echo "Producing surfaces for $base"
+  echo "Producing surface Kinemages for $base"
   # Run old and new versions in parallel
-  ($orig_exe $orig_surface_args $tfile > outputs/$base.orig.surface.kin 2> outputs/$base.orig.surface.stderr) &
-  ($new_exe $new_surface_args output.file_name=outputs/$base.new.surface.kin $tfile > outputs/$base.new.surface.stdout 2> outputs/$base.new.surface.stderr) &
+  ($orig_exe $orig_surface_args $inf > outputs/$base.orig.surface.kin 2> outputs/$base.orig.surface.stderr) &
+  ($new_exe $new_surface_args output.file_name=outputs/$base.new.surface.kin $inf > outputs/$base.new.surface.stdout 2> outputs/$base.new.surface.stderr) &
   wait
 
   echo "Testing structure $base"
   # Run old and new versions in parallel
-  ($orig_exe $orig_args -DUMPATOMS outputs/$base.orig.dump $tfile > outputs/$base.orig.out 2> outputs/$base.orig.stderr) &
-  ($new_exe $new_args output.file_name=outputs/$base.new.out output.dump_file_name=outputs/$base.new.dump $tfile > outputs/$base.new.stdout 2> outputs/$base.new.stderr) &
+  ($orig_exe $orig_args -DUMPATOMS outputs/$base.orig.dump $inf > outputs/$base.orig.out 2> outputs/$base.orig.stderr) &
+  ($new_exe $new_args output.file_name=outputs/$base.new.out output.dump_file_name=outputs/$base.new.dump $inf > outputs/$base.new.stdout 2> outputs/$base.new.stderr) &
   wait
 
   # Test for unexpected differences in atom-dump files.  The script returns messages when there
@@ -95,8 +95,16 @@ for f in $files; do
   s=`echo -n $d | wc -c`
   if [ $s -ne 0 ]; then echo " Score comparison Failed!"; failed=$((failed + 1)); fi
 
-  # Done with the input file.
-  rm -f $tfile
+  echo "Counting atoms (and verifying the same) in $base"
+  # Run old and new versions in parallel
+  ($orig_exe $orig_count_args $inf > outputs/$base.orig.count 2> outputs/$base.orig.count.stderr) &
+  ($new_exe $new_count_args output.file_name=outputs/$base.new.count $inf > outputs/$base.new.count.stdout 2> outputs/$base.new.count.stderr) &
+  wait
+
+  # Test for unexpected differences in atom counts.
+  d=`diff outputs/$base.orig.count outputs/$base.new.count`
+  s=`echo -n $d | wc -c`
+  if [ $s -ne 0 ]; then echo " Atom count comparison Failed!"; failed=$((failed + 1)); fi
 
 done
 
